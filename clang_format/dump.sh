@@ -1,0 +1,2 @@
+clang-format -dump-config
+
