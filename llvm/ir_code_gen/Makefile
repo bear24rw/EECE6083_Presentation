@@ -12,3 +12,4 @@ clean:
 	rm -fr hello_world.ll
 	rm -fr hello_world_gen
 	rm -fr hello_world_gen.ll
+	rm -fr hello_world_gen.dSYM
