@@ -40,17 +40,23 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor>
     bool VisitStmt(Stmt *s)
     {
         // Only care about If statements.
-        if (isa<IfStmt>(s)) {
-            IfStmt *IfStatement = cast<IfStmt>(s);
-            Stmt *Then = IfStatement->getThen();
+        if (!isa<IfStmt>(s)) return true;
 
-            TheRewriter.InsertText(
-                Then->getLocStart(), "// the 'if' part\n", true, true);
+        IfStmt *IfStatement = cast<IfStmt>(s);
+        Stmt *Then = IfStatement->getThen();
+        Stmt *Else = IfStatement->getElse();
 
-            Stmt *Else = IfStatement->getElse();
-            if (Else)
-                TheRewriter.InsertText(
-                    Else->getLocStart(), "// the 'else' part\n", true, true);
+        TheRewriter.InsertText(Then->getLocStart(),   // location
+                               "// the 'if' part\n",  // string
+                               true,                  // insert after
+                               true                   // indent new lines
+                               );
+
+        if (Else) {
+            TheRewriter.InsertText(Else->getLocStart(),
+                                   "// the 'else' part\n",
+                                   true,
+                                   true);
         }
 
         return true;
@@ -59,30 +65,30 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor>
     bool VisitFunctionDecl(FunctionDecl *f)
     {
         // Only function definitions (with bodies), not declarations.
-        if (f->hasBody()) {
-            Stmt *FuncBody = f->getBody();
+        if (!f->hasBody()) return true;
 
-            // Type name as string
-            QualType QT = f->getResultType();
-            string TypeStr = QT.getAsString();
+        Stmt *FuncBody = f->getBody();
 
-            // Function name
-            DeclarationName DeclName = f->getNameInfo().getName();
-            string FuncName = DeclName.getAsString();
+        // Type name as string
+        QualType QT = f->getResultType();
+        string TypeStr = QT.getAsString();
 
-            // Add comment before
-            stringstream SSBefore;
-            SSBefore << "// Begin function " << FuncName << " returning "
-                     << TypeStr << "\n";
-            SourceLocation ST = f->getSourceRange().getBegin();
-            TheRewriter.InsertText(ST, SSBefore.str(), true, true);
+        // Function name
+        DeclarationName DeclName = f->getNameInfo().getName();
+        string FuncName = DeclName.getAsString();
 
-            // And after
-            stringstream SSAfter;
-            SSAfter << "\n// End function " << FuncName << "\n";
-            ST = FuncBody->getLocEnd().getLocWithOffset(1);
-            TheRewriter.InsertText(ST, SSAfter.str(), true, true);
-        }
+        // Add comment before
+        stringstream SSBefore;
+        SSBefore << "// Begin function " << FuncName << " returning " << TypeStr
+                 << "\n";
+        SourceLocation ST = f->getSourceRange().getBegin();
+        TheRewriter.InsertText(ST, SSBefore.str(), true, true);
+
+        // And after
+        stringstream SSAfter;
+        SSAfter << "\n// End function " << FuncName << "\n";
+        ST = FuncBody->getLocEnd().getLocWithOffset(1);
+        TheRewriter.InsertText(ST, SSAfter.str(), true, true);
 
         return true;
     }
@@ -149,8 +155,9 @@ int main(int argc, char *argv[])
     // Set the main file handled by the source manager to the input file.
     const FileEntry *FileIn = FileMgr.getFile(argv[1]);
     SourceMgr.createMainFileID(FileIn);
-    TheCompInst.getDiagnosticClient().BeginSourceFile(
-        TheCompInst.getLangOpts(), &TheCompInst.getPreprocessor());
+    TheCompInst.getDiagnosticClient()
+        .BeginSourceFile(TheCompInst.getLangOpts(),
+                         &TheCompInst.getPreprocessor());
 
     // Create an AST consumer instance which is going to get called by
     // ParseAST.
