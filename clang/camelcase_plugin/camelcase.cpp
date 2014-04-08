@@ -29,6 +29,7 @@ class MyClassVisitor : public RecursiveASTVisitor<MyClassVisitor>
         if (underscorePos != StringRef::npos) {
 
             std::string tempName = name;
+            tempName[0] = toUppercase(tempName[0]);
 
             while (underscorePos != StringRef::npos) {
                 tempName[underscorePos + 1] = toUppercase(tempName[underscorePos + 1]);
